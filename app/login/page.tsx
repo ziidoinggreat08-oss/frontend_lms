@@ -1,9 +1,61 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
+  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setIsLoading(true);
+
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Gagal login, periksa kredensial Anda");
+      }
+
+      // Login berhasil, simpan token & role
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("role", data.role);
+      localStorage.setItem("user", JSON.stringify(data.user));
+
+      // Redirect berdasarkan role
+      switch (data.role) {
+        case "admin":
+          router.push("/admin/dashboard");
+          break;
+        case "guru":
+          router.push("/guru/dashboard");
+          break;
+        case "siswa":
+          router.push("/siswa/dashboard");
+          break;
+        default:
+          router.push("/dashboard");
+      }
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  }
 
   return (
     <main className="min-h-screen bg-white text-gray-800">
@@ -256,7 +308,14 @@ export default function LoginPage() {
 
 
               {/* ================= LOGIN FORM ================= */}
-              <form className="space-y-5">
+              <form onSubmit={handleLogin} className="space-y-5">
+
+                {/* Tampilkan pesan error jika ada */}
+                {error && (
+                  <div className="rounded-lg bg-red-50 p-3 text-[12px] text-red-600 border border-red-100">
+                    {error}
+                  </div>
+                )}
 
                 {/* Username */}
                 <div>
@@ -284,6 +343,8 @@ export default function LoginPage() {
 
                     <input
                       type="text"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
                       placeholder="Masukkan email atau username"
                       className="h-11 w-full rounded-lg bg-[#e5e5e5] pl-10 pr-4 text-[11px] outline-none transition placeholder:text-gray-500 focus:ring-2 focus:ring-blue-500"
                     />
@@ -320,6 +381,8 @@ export default function LoginPage() {
 
                     <input
                       type={showPassword ? "text" : "password"}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
                       placeholder="Masukkan password"
                       className="h-11 w-full rounded-lg bg-[#e5e5e5] pl-10 pr-11 text-[11px] outline-none transition placeholder:text-gray-500 focus:ring-2 focus:ring-blue-500"
                     />
@@ -388,9 +451,12 @@ export default function LoginPage() {
                 {/* Login Button */}
                 <button
                   type="submit"
-                  className="mt-5 h-11 w-full rounded-lg bg-blue-600 text-[12px] font-semibold text-white transition hover:bg-blue-700 active:scale-[0.99]"
+                  disabled={isLoading}
+                  className={`mt-5 h-11 w-full rounded-lg text-[12px] font-semibold text-white transition active:scale-[0.99] ${
+                    isLoading ? "bg-blue-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"
+                  }`}
                 >
-                  Masuk
+                  {isLoading ? "Memproses..." : "Masuk"}
                 </button>
 
               </form>
