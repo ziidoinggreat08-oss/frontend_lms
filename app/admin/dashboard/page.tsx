@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -56,6 +57,13 @@ export default function AdminDashboard() {
             <p className="text-2xl font-bold text-orange-600 mt-1">--</p>
           </div>
         </div>
+
+        <Link
+          href="/admin/siswa"
+          className="mt-8 inline-flex items-center rounded-lg bg-[#1d3557] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#274b7a]"
+        >
+          Kelola Data Siswa
+        </Link>
 
         <button 
           onClick={handleLogout}

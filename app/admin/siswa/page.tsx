@@ -1,0 +1,60 @@
+"use client";
+
+import Link from "next/link";
+import { FormEvent, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+
+type Student = { id: number; nis: string; nisn: string; nama_lengkap: string; username: string; email: string; jenis_kelamin: string; tempat_lahir: string; tanggal_lahir: string; no_telepon: string; alamat: string; kelas_id: number; nama_kelas: string; jurusan_id: number; nama_jurusan: string; status: string };
+type ClassOption = { id: number; nama_kelas: string; jurusan_id: number; nama_jurusan: string };
+type FormData = Omit<Student, "id" | "nama_kelas" | "nama_jurusan"> & { password: string };
+
+const blankForm: FormData = { nis: "", nisn: "", nama_lengkap: "", username: "", email: "", password: "", jenis_kelamin: "P", tempat_lahir: "", tanggal_lahir: "", no_telepon: "", alamat: "", kelas_id: 0, jurusan_id: 0, status: "aktif" };
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+
+export default function StudentManagementPage() {
+  const router = useRouter();
+  const [students, setStudents] = useState<Student[]>([]);
+  const [classes, setClasses] = useState<ClassOption[]>([]);
+  const [form, setForm] = useState<FormData>(blankForm);
+  const [editing, setEditing] = useState<Student | null>(null);
+  const [search, setSearch] = useState("");
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+
+  const headers = () => ({ "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("token") || ""}` });
+  const load = async () => {
+    setLoading(true); setError("");
+    try {
+      const [studentsResponse, classesResponse] = await Promise.all([fetch(`${API_URL}/api/siswa`, { headers: headers() }), fetch(`${API_URL}/api/kelas`, { headers: headers() })]);
+      if (studentsResponse.status === 401 || studentsResponse.status === 403) { router.push("/login"); return; }
+      const studentData = await studentsResponse.json(); const classData = await classesResponse.json();
+      if (!studentsResponse.ok) throw new Error(studentData.message || "Gagal memuat data siswa");
+      setStudents(studentData); setClasses(classesResponse.ok ? classData : []);
+    } catch (err) { setError(err instanceof Error ? err.message : "Gagal terhubung ke backend"); } finally { setLoading(false); }
+  };
+  useEffect(() => { if (!localStorage.getItem("token") || localStorage.getItem("role") !== "admin") { router.push("/login"); return; } load(); }, [router]);
+  const filtered = useMemo(() => students.filter((student) => `${student.nama_lengkap} ${student.nis} ${student.nama_kelas}`.toLowerCase().includes(search.toLowerCase())), [students, search]);
+  const selectedClasses = classes.filter((item) => !form.jurusan_id || item.jurusan_id === form.jurusan_id);
+  const change = (field: keyof FormData, value: string | number) => setForm((current) => ({ ...current, [field]: value }));
+  const openCreate = () => { setEditing(null); setForm(blankForm); setError(""); setOpen(true); };
+  const openEdit = (student: Student) => { setEditing(student); setForm({ ...student, password: "" }); setError(""); setOpen(true); };
+  const save = async (event: FormEvent) => {
+    event.preventDefault(); setSaving(true); setError("");
+    try {
+      const response = await fetch(editing ? `${API_URL}/api/siswa/${editing.id}` : `${API_URL}/api/siswa`, { method: editing ? "PUT" : "POST", headers: headers(), body: JSON.stringify(form) });
+      const data = await response.json(); if (!response.ok) throw new Error(data.message || "Gagal menyimpan siswa");
+      setMessage(data.message || "Data siswa berhasil disimpan"); setOpen(false); await load();
+    } catch (err) { setError(err instanceof Error ? err.message : "Gagal menyimpan siswa"); } finally { setSaving(false); }
+  };
+  const remove = async (student: Student) => {
+    if (!window.confirm(`Hapus akun dan data ${student.nama_lengkap}? Tindakan ini tidak dapat dibatalkan.`)) return;
+    setError(""); try { const response = await fetch(`${API_URL}/api/siswa/${student.id}`, { method: "DELETE", headers: headers() }); const data = await response.json(); if (!response.ok) throw new Error(data.message || "Gagal menghapus siswa"); setMessage(data.message); await load(); } catch (err) { setError(err instanceof Error ? err.message : "Gagal menghapus siswa"); }
+  };
+  return <main className="min-h-screen bg-slate-50 text-slate-800"><header className="border-b border-slate-200 bg-white"><div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4"><div><p className="text-xs font-bold tracking-widest text-blue-600">EDU CLASS • ADMIN</p><h1 className="text-xl font-bold text-[#1d3557]">Manajemen Siswa</h1></div><Link href="/admin/dashboard" className="text-sm font-semibold text-[#1d3557] hover:underline">← Dashboard</Link></div></header><section className="mx-auto max-w-7xl px-5 py-8"><div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div><h2 className="text-lg font-bold">Data siswa</h2><p className="text-sm text-slate-500">Tambah, ubah, atau hapus akun siswa dan penempatannya.</p></div><button onClick={openCreate} className="rounded-lg bg-[#1d3557] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#274b7a]">+ Tambah Siswa</button></div>{message && <div className="mb-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">{message}</div>}{error && <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}<div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm"><div className="border-b border-slate-100 p-4"><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Cari nama, NIS, atau kelas..." className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500" /></div><div className="overflow-x-auto"><table className="w-full min-w-[760px] text-left text-sm"><thead className="bg-slate-50 text-xs uppercase text-slate-500"><tr><th className="px-5 py-3">Siswa</th><th className="px-5 py-3">NIS</th><th className="px-5 py-3">Kelas / Jurusan</th><th className="px-5 py-3">Status</th><th className="px-5 py-3 text-right">Aksi</th></tr></thead><tbody>{loading ? <tr><td colSpan={5} className="px-5 py-10 text-center text-slate-500">Memuat data siswa...</td></tr> : filtered.length === 0 ? <tr><td colSpan={5} className="px-5 py-10 text-center text-slate-500">Belum ada data siswa.</td></tr> : filtered.map((student) => <tr key={student.id} className="border-t border-slate-100"><td className="px-5 py-4"><p className="font-semibold">{student.nama_lengkap}</p><p className="text-xs text-slate-500">{student.email}</p></td><td className="px-5 py-4">{student.nis}</td><td className="px-5 py-4"><p>{student.nama_kelas}</p><p className="text-xs text-slate-500">{student.nama_jurusan}</p></td><td className="px-5 py-4"><span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${student.status === "aktif" ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-600"}`}>{student.status}</span></td><td className="px-5 py-4 text-right"><button onClick={() => openEdit(student)} className="mr-3 font-semibold text-blue-700 hover:underline">Edit</button><button onClick={() => remove(student)} className="font-semibold text-red-600 hover:underline">Hapus</button></td></tr>)}</tbody></table></div></div></section>{open && <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/45 p-4"><div className="mx-auto my-6 max-w-3xl rounded-xl bg-white shadow-xl"><div className="flex items-start justify-between border-b p-5"><div><h2 className="text-lg font-bold">{editing ? "Edit Siswa" : "Tambah Siswa"}</h2><p className="text-sm text-slate-500">{editing ? "Kosongkan password jika tidak ingin menggantinya." : "Akun login siswa akan dibuat bersamaan."}</p></div><button onClick={() => setOpen(false)} className="text-2xl text-slate-400 hover:text-slate-700" aria-label="Tutup">×</button></div><form onSubmit={save} className="p-5"><div className="grid gap-4 md:grid-cols-2"><Field label="Nama lengkap *" value={form.nama_lengkap} onChange={(value) => change("nama_lengkap", value)} /><Field label="NIS *" value={form.nis} onChange={(value) => change("nis", value)} /><Field label="NISN" value={form.nisn} onChange={(value) => change("nisn", value)} /><Field label="Username *" value={form.username} onChange={(value) => change("username", value)} /><Field label="Email *" type="email" value={form.email} onChange={(value) => change("email", value)} /><Field label={editing ? "Password baru" : "Password *" type="password" value={form.password} onChange={(value) => change("password", value)} required={!editing} /><Select label="Jenis kelamin *" value={form.jenis_kelamin} onChange={(value) => change("jenis_kelamin", value)} options={[['L','Laki-laki'], ['P','Perempuan']]} /><Select label="Status *" value={form.status} onChange={(value) => change("status", value)} options={[["aktif","Aktif"],["nonaktif","Nonaktif"],["lulus","Lulus"],["keluar","Keluar"]]} /><Select label="Jurusan *" value={String(form.jurusan_id)} onChange={(value) => { const jurusan = Number(value); setForm((current) => ({ ...current, jurusan_id: jurusan, kelas_id: current.kelas_id && classes.some((item) => item.id === current.kelas_id && item.jurusan_id === jurusan) ? current.kelas_id : 0 })); }} options={Array.from(new Map(classes.map((item) => [item.jurusan_id, item.nama_jurusan])).entries()).map(([id, name]) => [String(id), name])} placeholder="Pilih jurusan" /><Select label="Kelas *" value={String(form.kelas_id || "")} onChange={(value) => change("kelas_id", Number(value))} options={selectedClasses.map((item) => [String(item.id), item.nama_kelas])} placeholder="Pilih kelas" /><Field label="Tempat lahir" value={form.tempat_lahir} onChange={(value) => change("tempat_lahir", value)} /><Field label="Tanggal lahir" type="date" value={form.tanggal_lahir} onChange={(value) => change("tanggal_lahir", value)} /><Field label="No. telepon" value={form.no_telepon} onChange={(value) => change("no_telepon", value)} /></div><label className="mt-4 block text-sm font-medium text-slate-700">Alamat<textarea value={form.alamat} onChange={(event) => change("alamat", event.target.value)} className="mt-1 min-h-20 w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-blue-500" /></label>{error && <p className="mt-4 text-sm text-red-600">{error}</p>}<div className="mt-6 flex justify-end gap-3"><button type="button" onClick={() => setOpen(false)} className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold">Batal</button><button disabled={saving} className="rounded-lg bg-[#1d3557] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">{saving ? "Menyimpan..." : "Simpan"}</button></div></form></div></div>}</main>;
+}
+
+function Field({ label, value, onChange, type = "text", required = false }: { label: string; value: string; onChange: (value: string) => void; type?: string; required?: boolean }) { return <label className="block text-sm font-medium text-slate-700">{label}<input required={required} type={type} value={value} onChange={(event) => onChange(event.target.value)} className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-blue-500" /></label>; }
+function Select({ label, value, onChange, options, placeholder }: { label: string; value: string; onChange: (value: string) => void; options: string[][]; placeholder?: string }) { return <label className="block text-sm font-medium text-slate-700">{label}<select required value={value} onChange={(event) => onChange(event.target.value)} className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 outline-none focus:border-blue-500"><option value="">{placeholder || "Pilih"}</option>{options.map(([key, name]) => <option key={key} value={key}>{name}</option>)}</select></label>; }
