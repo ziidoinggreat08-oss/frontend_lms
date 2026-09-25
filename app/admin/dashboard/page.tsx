@@ -28,7 +28,7 @@ export default function AdminDashboard() {
     localStorage.removeItem("token");
     localStorage.removeItem("role");
     localStorage.removeItem("user");
-    router.push("/login");
+    router.push("/");
   };
 
   if (!user) return <div className="p-10 text-center">Memuat dashboard...</div>;
