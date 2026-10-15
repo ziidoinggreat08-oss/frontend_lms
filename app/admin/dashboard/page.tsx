@@ -2,77 +2,99 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+
+type Stats = {
+  total_siswa: number;
+  total_guru: number;
+  total_kelas: number;
+  total_jurusan: number;
+  total_mapel: number;
+};
 
 export default function AdminDashboard() {
   const router = useRouter();
-  const [user, setUser] = useState<any>(null);
+  const [stats, setStats] = useState<Stats | null>(null);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    // Cek token dan role
-    const token = localStorage.getItem("token");
-    const role = localStorage.getItem("role");
-    const userData = localStorage.getItem("user");
+    const fetchStats = async () => {
+      try {
+        const response = await fetch(`${API_URL}/api/dashboard/stats`, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        });
+        if (response.status === 401 || response.status === 403) {
+          router.push("/login");
+          return;
+        }
+        if (!response.ok) throw new Error("Gagal mengambil data statistik");
+        const data = await response.json();
+        setStats(data);
+      } catch (err: any) {
+        setError(err.message);
+      }
+    };
 
-    if (!token || role !== "admin") {
-      router.push("/login");
-      return;
-    }
-
-    if (userData) {
-      setUser(JSON.parse(userData));
-    }
+    fetchStats();
   }, [router]);
 
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("role");
-    localStorage.removeItem("user");
-    router.push("/");
-  };
-
-  if (!user) return <div className="p-10 text-center">Memuat dashboard...</div>;
-
   return (
-    <main className="min-h-screen bg-gray-50 text-gray-800 p-8">
-      <div className="max-w-4xl mx-auto bg-white p-8 rounded-xl shadow-sm border border-gray-100">
-        <h1 className="text-2xl font-bold text-[#1d3557]">Dashboard Admin</h1>
-        <p className="mt-2 text-gray-600">Selamat datang kembali, <strong>{user.username}</strong>!</p>
-        
-        <div className="mt-8 grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
-            <h3 className="text-blue-800 font-semibold text-sm">Total Siswa</h3>
-            <p className="text-2xl font-bold text-blue-600 mt-1">--</p>
+    <div className="mx-auto max-w-6xl">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-[#1d3557]">Dashboard Admin</h1>
+        <p className="text-gray-500 mt-1">Ringkasan sistem pembelajaran Edu Class</p>
+      </div>
+
+      {error && (
+        <div className="mb-6 rounded-lg bg-red-50 p-4 text-sm text-red-600 border border-red-100">
+          {error}
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-between">
+          <div className="flex justify-between items-start">
+            <h3 className="text-gray-500 font-medium">Total Siswa</h3>
+            <span className="text-2xl">👨‍🎓</span>
           </div>
-          <div className="bg-green-50 p-4 rounded-lg border border-green-100">
-            <h3 className="text-green-800 font-semibold text-sm">Total Guru</h3>
-            <p className="text-2xl font-bold text-green-600 mt-1">--</p>
-          </div>
-          <div className="bg-purple-50 p-4 rounded-lg border border-purple-100">
-            <h3 className="text-purple-800 font-semibold text-sm">Total Kelas</h3>
-            <p className="text-2xl font-bold text-purple-600 mt-1">--</p>
-          </div>
-          <div className="bg-orange-50 p-4 rounded-lg border border-orange-100">
-            <h3 className="text-orange-800 font-semibold text-sm">Jurusan</h3>
-            <p className="text-2xl font-bold text-orange-600 mt-1">--</p>
-          </div>
+          <p className="text-4xl font-bold text-[#1d3557] mt-4">{stats ? stats.total_siswa : "..."}</p>
         </div>
 
-        <Link
-          href="/admin/siswa"
-          className="mt-8 inline-flex items-center rounded-lg bg-[#1d3557] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#274b7a]"
-        >
-          Kelola Data Siswa
-        </Link>
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-between">
+          <div className="flex justify-between items-start">
+            <h3 className="text-gray-500 font-medium">Total Guru</h3>
+            <span className="text-2xl">👨‍🏫</span>
+          </div>
+          <p className="text-4xl font-bold text-[#1d3557] mt-4">{stats ? stats.total_guru : "..."}</p>
+        </div>
 
-        <button 
-          onClick={handleLogout}
-          className="mt-10 px-4 py-2 bg-red-50 text-red-600 rounded hover:bg-red-100 text-sm font-semibold transition"
-        >
-          Logout
-        </button>
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-between">
+          <div className="flex justify-between items-start">
+            <h3 className="text-gray-500 font-medium">Total Kelas</h3>
+            <span className="text-2xl">🏫</span>
+          </div>
+          <p className="text-4xl font-bold text-[#1d3557] mt-4">{stats ? stats.total_kelas : "..."}</p>
+        </div>
+
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-between">
+          <div className="flex justify-between items-start">
+            <h3 className="text-gray-500 font-medium">Total Jurusan</h3>
+            <span className="text-2xl">🏢</span>
+          </div>
+          <p className="text-4xl font-bold text-[#1d3557] mt-4">{stats ? stats.total_jurusan : "..."}</p>
+        </div>
+        
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-between">
+          <div className="flex justify-between items-start">
+            <h3 className="text-gray-500 font-medium">Mata Pelajaran</h3>
+            <span className="text-2xl">📚</span>
+          </div>
+          <p className="text-4xl font-bold text-[#1d3557] mt-4">{stats ? stats.total_mapel : "..."}</p>
+        </div>
       </div>
-    </main>
+    </div>
   );
 }
-

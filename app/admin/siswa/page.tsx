@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import StudentManagement from "./student-management";
 
 type Student = { id: number; nis: string; nisn: string; nama_lengkap: string; username: string; email: string; jenis_kelamin: string; tempat_lahir: string; tanggal_lahir: string; no_telepon: string; alamat: string; kelas_id: number; nama_kelas: string; jurusan_id: number; nama_jurusan: string; status: string };
 type ClassOption = { id: number; nama_kelas: string; jurusan_id: number; nama_jurusan: string };
@@ -11,7 +12,7 @@ type FormData = Omit<Student, "id" | "nama_kelas" | "nama_jurusan"> & { password
 const blankForm: FormData = { nis: "", nisn: "", nama_lengkap: "", username: "", email: "", password: "", jenis_kelamin: "P", tempat_lahir: "", tanggal_lahir: "", no_telepon: "", alamat: "", kelas_id: 0, jurusan_id: 0, status: "aktif" };
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
-export default function StudentManagementPage() {
+function LegacyStudentManagementPage() {
   const router = useRouter();
   const [students, setStudents] = useState<Student[]>([]);
   const [classes, setClasses] = useState<ClassOption[]>([]);
@@ -75,3 +76,5 @@ export default function StudentManagementPage() {
 
 function Field({ label, value, onChange, type = "text", required = false }: { label: string; value: string; onChange: (value: string) => void; type?: string; required?: boolean }) { return <label className="block text-sm font-medium text-slate-700">{label}<input required={required} type={type} value={value} onChange={(event) => onChange(event.target.value)} className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-blue-500" /></label>; }
 function Select({ label, value, onChange, options, placeholder }: { label: string; value: string; onChange: (value: string) => void; options: string[][]; placeholder?: string }) { return <label className="block text-sm font-medium text-slate-700">{label}<select required value={value} onChange={(event) => onChange(event.target.value)} className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 outline-none focus:border-blue-500"><option value="">{placeholder || "Pilih"}</option>{options.map(([key, name]) => <option key={key} value={key}>{name}</option>)}</select></label>; }
+
+export default StudentManagement;
