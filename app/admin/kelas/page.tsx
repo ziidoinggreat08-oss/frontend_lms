@@ -233,10 +233,38 @@ export default function KelasPage() {
     );
   }, [data, form.jurusan_id, form.tingkat, editingId]);
 
+  // Map guru yang sudah menjadi walas di kelas: guru_id -> nama_kelas
+  const assignedWalasMap = useMemo(() => {
+    const map = new Map<number, string>();
+    data.forEach((k) => {
+      if (k.wali_kelas_id) {
+        map.set(k.wali_kelas_id, k.nama_kelas);
+      }
+    });
+    return map;
+  }, [data]);
+
+  // Cek apakah guru yang dipilih sedang memegang kelas lain
+  const isWalasConflict = useMemo(() => {
+    if (!form.wali_kelas_id) return false;
+    const selectedGuruId = Number(form.wali_kelas_id);
+    const assignedKelas = assignedWalasMap.get(selectedGuruId);
+    if (!assignedKelas) return false;
+    const isCurrentKelasWalas = editingId
+      ? data.find((k) => k.id === editingId)?.wali_kelas_id === selectedGuruId
+      : false;
+    return !isCurrentKelasWalas;
+  }, [form.wali_kelas_id, assignedWalasMap, data, editingId]);
+
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isDuplicateName) {
       setError(`Kelas "${form.nama_kelas}" sudah terdaftar. Nomor rombel tidak boleh duplikat.`);
+      return;
+    }
+    if (isWalasConflict) {
+      const assignedKelas = assignedWalasMap.get(Number(form.wali_kelas_id));
+      setError(`Guru yang dipilih sudah menjadi wali kelas di ${assignedKelas}. Satu guru hanya dapat menjadi walas di 1 kelas.`);
       return;
     }
 
@@ -923,21 +951,53 @@ export default function KelasPage() {
 
               {/* Wali Kelas Opsional */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wider">
-                  Wali Kelas (Opsional)
-                </label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                    Wali Kelas (Opsional)
+                  </label>
+                  <span className="text-[10px] text-slate-500 font-medium">
+                    1 guru hanya dapat menjadi walas di 1 kelas
+                  </span>
+                </div>
                 <select
-                  className="w-full border border-slate-300 p-2.5 rounded-xl outline-none focus:border-[#003399] bg-white text-xs"
+                  className={`w-full border p-2.5 rounded-xl outline-none text-xs transition ${
+                    isWalasConflict
+                      ? "border-rose-400 bg-rose-50/20 text-rose-900 focus:border-rose-500"
+                      : "border-slate-300 focus:border-[#003399] bg-white"
+                  }`}
                   value={form.wali_kelas_id}
                   onChange={(e) => setForm({ ...form, wali_kelas_id: e.target.value })}
                 >
-                  <option value="">-- Belum Ditentukan --</option>
-                  {guruList.map((g) => (
-                    <option key={g.id} value={g.id}>
-                      {g.nama_lengkap}
-                    </option>
-                  ))}
+                  <option value="">-- Belum Ditentukan (Kosongkan) --</option>
+                  {guruList.map((g) => {
+                    const assignedKelas = assignedWalasMap.get(g.id);
+                    const isCurrentKelasWalas = editingId
+                      ? data.find((k) => k.id === editingId)?.wali_kelas_id === g.id
+                      : false;
+                    const isUnavailable = assignedKelas && !isCurrentKelasWalas;
+
+                    return (
+                      <option
+                        key={g.id}
+                        value={g.id}
+                        disabled={Boolean(isUnavailable)}
+                        className={isUnavailable ? "text-slate-400 bg-slate-100" : "text-slate-800 font-medium"}
+                      >
+                        {isUnavailable
+                          ? `${g.nama_lengkap} (Sudah Walas di ${assignedKelas} - Tidak Tersedia)`
+                          : g.nama_lengkap}
+                      </option>
+                    );
+                  })}
                 </select>
+                {isWalasConflict && (
+                  <p className="mt-1.5 text-xs text-rose-600 font-semibold flex items-center gap-1 animate-in fade-in duration-100">
+                    <span>⚠️</span>
+                    <span>
+                      Guru ini sudah menjadi wali kelas di <strong>{assignedWalasMap.get(Number(form.wali_kelas_id))}</strong>. Pilih guru lain atau kosongkan kelas sebelumnya.
+                    </span>
+                  </p>
+                )}
               </div>
             </div>
 
@@ -951,9 +1011,9 @@ export default function KelasPage() {
               </button>
               <button
                 type="submit"
-                disabled={isDuplicateName}
+                disabled={isDuplicateName || isWalasConflict}
                 className={`px-5 py-2 rounded-xl text-xs font-bold transition shadow-sm ${
-                  isDuplicateName
+                  isDuplicateName || isWalasConflict
                     ? "bg-slate-300 text-slate-500 cursor-not-allowed"
                     : "bg-[#003399] hover:bg-blue-800 text-white cursor-pointer"
                 }`}

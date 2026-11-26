@@ -55,6 +55,7 @@ export default function KurikulumLayout({ children }: { children: React.ReactNod
     { href: "/kurikulum/pengampu", label: "Mapel & Guru Pengampu", icon: "📚" },
     { href: "/kurikulum/monitoring", label: "Monitoring Pembelajaran", icon: "🔍" },
     { href: "/kurikulum/nilai", label: "Rekap Nilai Siswa", icon: "🎯" },
+    { href: "/kurikulum/profil", label: "Profil Akun", icon: "👤" },
   ];
 
   const currentTitle =

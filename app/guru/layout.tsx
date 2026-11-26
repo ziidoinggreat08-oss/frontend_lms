@@ -56,6 +56,7 @@ export default function GuruLayout({ children }: { children: React.ReactNode }) 
     if (pathname.startsWith("/guru/kuis")) return "Kuis Harian Digital";
     if (pathname.startsWith("/guru/ujian")) return "Ujian Semester (PTS/PAS)";
     if (pathname.startsWith("/guru/nilai")) return "Rekap Nilai Siswa";
+    if (pathname.startsWith("/guru/profil")) return "Profil Pendidik";
     return "Portal Guru";
   };
 
@@ -116,6 +117,19 @@ export default function GuruLayout({ children }: { children: React.ReactNode }) 
               <Link href="/guru/nilai" className={navItemClass(isActive("/guru/nilai"))}>
                 <span className="text-base">🎯</span>
                 <span>Rekap Nilai Siswa</span>
+              </Link>
+            </div>
+          </div>
+
+          {/* Akun Pendidik */}
+          <div>
+            <h3 className="text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-2 px-3">
+              Akun Saya
+            </h3>
+            <div className="space-y-1">
+              <Link href="/guru/profil" className={navItemClass(isActive("/guru/profil"))}>
+                <span className="text-base">👤</span>
+                <span>Profil Pendidik</span>
               </Link>
             </div>
           </div>

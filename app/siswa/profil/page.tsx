@@ -1,2 +1,216 @@
-"use client";import {useEffect,useState} from 'react';const api=process.env.NEXT_PUBLIC_API_URL||'http://localhost:8080';export default function Profil(){const[d,setD]=useState<any>(null),[msg,setMsg]=useState('');const h={Authorization:`Bearer ${localStorage.getItem('token')||''}`};useEffect(()=>{fetch(api+'/api/siswa/profil',{headers:h}).then(r=>r.json()).then(setD)},[]);if(!d)return <p>Memuat profil...</p>;const save=async()=>{const r=await fetch(api+'/api/siswa/profil',{method:'PUT',headers:{...h,'Content-Type':'application/json'},body:JSON.stringify({no_telepon:d.no_telepon,alamat:d.alamat})});setMsg((await r.json()).message)};return <div><h1 className="text-2xl font-bold text-[#1d3557]">Profil</h1><p className="mt-4">{d.nama_lengkap} · {d.nis}</p><p className="text-sm">{d.kelas} · {d.jurusan}</p><input className="border p-2 block mt-4" value={d.no_telepon} placeholder="Nomor telepon" onChange={e=>setD({...d,no_telepon:e.target.value})}/><textarea className="border p-2 block mt-2" value={d.alamat} placeholder="Alamat" onChange={e=>setD({...d,alamat:e.target.value})}/><button onClick={save} className="mt-2 bg-[#003399] text-white rounded px-4 py-2">Simpan</button><p>{msg}</p></div>}
+"use client";
 
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+
+const api = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+
+export default function SiswaProfilPage() {
+  const router = useRouter();
+  const [profile, setProfile] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadProfile = async () => {
+      try {
+        const token = localStorage.getItem("token") || "";
+        if (!token) {
+          router.push("/login");
+          return;
+        }
+
+        const res = await fetch(`${api}/api/profil/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (res.ok) {
+          const contentType = res.headers.get("content-type");
+          if (contentType && contentType.includes("application/json")) {
+            const data = await res.json();
+            if (data && typeof data === "object") {
+              setProfile(data);
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Gagal memuat profil siswa:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    void loadProfile();
+  }, [router]);
+
+  if (loading) {
+    return (
+      <div className="max-w-4xl mx-auto p-12 text-center text-slate-400">
+        <div className="animate-spin w-8 h-8 border-3 border-[#003399] border-t-transparent rounded-full mx-auto mb-3"></div>
+        Memuat data profil siswa dari database...
+      </div>
+    );
+  }
+
+  const p = profile || {};
+
+  return (
+    <div className="max-w-4xl mx-auto space-y-6 pb-12">
+      {/* Header Info */}
+      <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 text-[11px] font-bold text-[#003399] mb-2 border border-blue-100">
+          <span>🎓</span>
+          <span>Kartu Identitas Digital Siswa (View-Only)</span>
+        </div>
+        <h1 className="text-xl sm:text-2xl font-black text-slate-800 tracking-tight">
+          Profil Peserta Didik
+        </h1>
+        <p className="text-xs text-slate-500 mt-1">
+          Identitas resmi kesiswaan terdaftar di platform pembelajaran SMK Citra Negara.
+        </p>
+      </div>
+
+      {/* Main Profile Card (Digital Student Card) */}
+      <div className="bg-white rounded-3xl border border-slate-200/80 overflow-hidden shadow-xs">
+        {/* Cover Banner Mewah dengan Avatar & Nama Bersih di Dalamnya */}
+        <div className="bg-gradient-to-r from-[#1d3557] via-[#1647b8] to-[#003399] p-6 sm:p-8 rounded-t-3xl relative">
+          <div className="absolute right-6 top-6">
+            <span className="px-3.5 py-1.5 bg-white/20 backdrop-blur-md rounded-full text-xs font-bold text-white border border-white/20 shadow-xs">
+              PESERTA DIDIK AKTIF
+            </span>
+          </div>
+
+          <div className="flex items-center gap-4 sm:gap-6 pt-2">
+            <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-white/10 backdrop-blur-md p-1.5 border border-white/30 shadow-lg shrink-0 flex items-center justify-center">
+              <div className="w-full h-full rounded-xl bg-white flex items-center justify-center text-3xl sm:text-4xl shadow-xs">
+                🎓
+              </div>
+            </div>
+            <div className="text-white space-y-1">
+              <h2 className="text-xl sm:text-3xl font-black tracking-tight text-white drop-shadow-sm">
+                {p.nama_lengkap || p.username || "-"}
+              </h2>
+              <p className="text-xs sm:text-sm font-semibold text-blue-100 flex items-center gap-2">
+                <span>NIS: {p.nis && p.nis !== "-" ? p.nis : "-"}</span>
+                <span>&bull;</span>
+                <span>
+                  {p.kelas && p.kelas !== "-" ? p.kelas : "-"}
+                  {p.jurusan && p.jurusan !== "-" ? ` (${p.jurusan})` : ""}
+                </span>
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Content Details */}
+        <div className="p-6 sm:p-8 space-y-6">
+          {/* Status & Rombel Badge Bar */}
+          <div className="flex items-center justify-between p-3.5 bg-slate-50 rounded-2xl border border-slate-100 flex-wrap gap-2">
+            <div className="flex items-center gap-2 text-xs">
+              <span className="text-slate-400 font-medium">Status Kesiswaan:</span>
+              <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold border border-emerald-200 text-[11px] flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                {p.status === "aktif" ? "Siswa Aktif" : p.status || "Siswa Aktif"}
+              </span>
+            </div>
+            <div className="flex items-center gap-2 text-xs">
+              <span className="text-slate-400 font-medium">Kelas / Rombel:</span>
+              <span className="px-2.5 py-0.5 rounded-full bg-blue-50 text-[#003399] font-bold border border-blue-200 text-[11px]">
+                {p.kelas && p.kelas !== "-" ? p.kelas : "-"}
+              </span>
+            </div>
+          </div>
+
+          {/* Grid Informasi Detail Murni Database */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 space-y-1">
+              <p className="text-slate-400 font-medium">Nomor Induk Siswa (NIS)</p>
+              <p className="font-mono font-bold text-slate-800 text-sm">
+                {p.nis && p.nis !== "-" ? p.nis : "-"}
+              </p>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 space-y-1">
+              <p className="text-slate-400 font-medium">NISN Nasional</p>
+              <p className="font-mono font-bold text-slate-800 text-sm">
+                {p.nisn && p.nisn !== "-" ? p.nisn : "-"}
+              </p>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 space-y-1">
+              <p className="text-slate-400 font-medium">Nama Lengkap</p>
+              <p className="font-bold text-slate-800 text-sm">
+                {p.nama_lengkap || p.username || "-"}
+              </p>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 space-y-1">
+              <p className="text-slate-400 font-medium">Jenis Kelamin</p>
+              <p className="font-bold text-slate-800 text-sm">
+                {p.jenis_kelamin && p.jenis_kelamin !== "-" ? p.jenis_kelamin : "-"}
+              </p>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 space-y-1">
+              <p className="text-slate-400 font-medium">Program Keahlian / Jurusan</p>
+              <p className="font-bold text-slate-800 text-sm">
+                {p.jurusan && p.jurusan !== "-" ? p.jurusan : "-"}
+              </p>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 space-y-1">
+              <p className="text-slate-400 font-medium">Tempat, Tanggal Lahir</p>
+              <p className="font-bold text-slate-800 text-sm">
+                {p.tempat_lahir && p.tempat_lahir !== "-" && p.tanggal_lahir && p.tanggal_lahir !== "-"
+                  ? `${p.tempat_lahir}, ${p.tanggal_lahir}`
+                  : p.tempat_lahir && p.tempat_lahir !== "-"
+                  ? p.tempat_lahir
+                  : p.tanggal_lahir && p.tanggal_lahir !== "-"
+                  ? p.tanggal_lahir
+                  : "-"}
+              </p>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 space-y-1">
+              <p className="text-slate-400 font-medium">Username Login</p>
+              <p className="font-mono font-bold text-slate-800 text-sm">
+                @{p.username || "-"}
+              </p>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 space-y-1">
+              <p className="text-slate-400 font-medium">Email Terdaftar</p>
+              <p className="font-bold text-slate-800 text-sm">
+                {p.email || "-"}
+              </p>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 space-y-1">
+              <p className="text-slate-400 font-medium">Nomor Telepon / WhatsApp</p>
+              <p className="font-mono font-bold text-slate-800 text-sm">
+                {p.no_telepon && p.no_telepon !== "-" ? p.no_telepon : "-"}
+              </p>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 space-y-1">
+              <p className="text-slate-400 font-medium">Alamat Tempat Tinggal</p>
+              <p className="font-medium text-slate-700 text-xs">
+                {p.alamat && p.alamat !== "-" ? p.alamat : "-"}
+              </p>
+            </div>
+          </div>
+
+          {/* Kotak Catatan Kebijakan Resmi */}
+          <div className="p-4 rounded-2xl bg-blue-50/60 border border-blue-100 flex items-start gap-3 text-xs text-blue-900">
+            <span className="text-base shrink-0">ℹ️</span>
+            <div className="space-y-0.5">
+              <p className="font-bold">Informasi Akun Kesiswaan Terpusat</p>
+              <p className="text-blue-800/80 leading-relaxed">
+                Seluruh data identitas siswa, kelas rombel, dan akun login terdaftar secara resmi di database sekolah. Apabila terdapat kesalahan penulisan nama, NIS, atau pergantian kontak, silakan lapor kepada Wali Kelas atau Administrator Sekolah.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

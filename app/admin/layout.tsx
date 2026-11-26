@@ -70,6 +70,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     if (pathname.startsWith("/admin/mata-pelajaran")) return "Mata Pelajaran";
     if (pathname.startsWith("/admin/kurikulum")) return "Manajemen Kurikulum";
     if (pathname.startsWith("/admin/kepala-sekolah")) return "Kepala Sekolah";
+    if (pathname.startsWith("/admin/profil")) return "Profil Administrator";
     return "Admin Control Center";
   };
 
@@ -168,6 +169,19 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               <Link href="/admin/kepala-sekolah" className={navItemClass(isActive("/admin/kepala-sekolah"))}>
                 <span className="text-base">👔</span>
                 <span>Kepala Sekolah</span>
+              </Link>
+            </div>
+          </div>
+
+          {/* Akun Administrator */}
+          <div>
+            <h3 className="text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-2 px-3">
+              Akun Saya
+            </h3>
+            <div className="space-y-1">
+              <Link href="/admin/profil" className={navItemClass(isActive("/admin/profil"))}>
+                <span className="text-base">👤</span>
+                <span>Profil Saya</span>
               </Link>
             </div>
           </div>

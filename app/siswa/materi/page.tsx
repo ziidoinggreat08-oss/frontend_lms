@@ -4,6 +4,13 @@ import { useEffect, useState, useMemo } from "react";
 
 const api = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
+interface LampiranItem {
+  file_url: string;
+  nama_file: string;
+  ukuran_file?: number;
+  tipe_file?: string;
+}
+
 interface MateriItem {
   id: number;
   judul: string;
@@ -13,6 +20,7 @@ interface MateriItem {
   mata_pelajaran: string;
   guru: string;
   created_at: string;
+  lampiran?: LampiranItem[];
 }
 
 export default function SiswaMateriPage() {
@@ -72,6 +80,12 @@ export default function SiswaMateriPage() {
     return `${api}${url}`;
   };
 
+  const formatFileSize = (bytes?: number) => {
+    if (!bytes || bytes <= 0) return "";
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
   return (
     <div className="space-y-6 pb-12">
       {/* Header Halaman */}
@@ -85,7 +99,7 @@ export default function SiswaMateriPage() {
               Materi Pembelajaran
             </h1>
             <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-              Pelajari modul pembelajaran, rangkuman, dan referensi bacaan dari guru kamu.
+              Pelajari modul pembelajaran, rangkuman, modul multi-file, dan tangkapan layar panduan dari bapak/ibu guru.
             </p>
           </div>
         </div>
@@ -154,65 +168,70 @@ export default function SiswaMateriPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {filteredMateri.map((materi) => (
-            <div
-              key={materi.id}
-              className="bg-white rounded-2xl border border-slate-200/80 shadow-xs hover:shadow-md transition-all duration-200 p-5 flex flex-col justify-between group"
-            >
-              <div>
-                {/* Header Kartu: Badge Mapel & Tanggal */}
-                <div className="flex items-start justify-between gap-2 mb-3">
-                  <span className="px-2.5 py-1 bg-blue-50 text-[#003399] border border-blue-100 rounded-lg text-[11px] font-bold">
-                    {materi.mata_pelajaran || "Mata Pelajaran"}
-                  </span>
-                  <span className="text-[11px] text-slate-400 font-medium">
-                    {materi.created_at ? materi.created_at.split(" ")[0] : ""}
-                  </span>
+          {filteredMateri.map((materi) => {
+            const files = materi.lampiran && materi.lampiran.length > 0 ? materi.lampiran : materi.file_url ? [{ file_url: materi.file_url, nama_file: materi.file_url.split("/").pop() || "Berkas", tipe_file: "dokumen" }] : [];
+            const hasImages = files.some((f) => f.tipe_file === "gambar" || /\.(png|jpe?g|webp)$/i.test(f.file_url));
+
+            return (
+              <div
+                key={materi.id}
+                className="bg-white rounded-2xl border border-slate-200/80 shadow-xs hover:shadow-md transition-all duration-200 p-5 flex flex-col justify-between group"
+              >
+                <div>
+                  {/* Header Kartu: Badge Mapel & Tanggal */}
+                  <div className="flex items-start justify-between gap-2 mb-3">
+                    <span className="px-2.5 py-1 bg-blue-50 text-[#003399] border border-blue-100 rounded-lg text-[11px] font-bold">
+                      {materi.mata_pelajaran || "Mata Pelajaran"}
+                    </span>
+                    <span className="text-[11px] text-slate-400 font-medium">
+                      {materi.created_at ? materi.created_at.split(" ")[0] : ""}
+                    </span>
+                  </div>
+
+                  {/* Judul Materi */}
+                  <h3 className="font-bold text-[#1d3557] text-base line-clamp-2 group-hover:text-[#003399] transition mb-2">
+                    {materi.judul}
+                  </h3>
+
+                  {/* Cuplikan Deskripsi */}
+                  <p className="text-xs text-slate-600 line-clamp-3 mb-4 leading-relaxed">
+                    {materi.deskripsi || "Tidak ada deskripsi pengantar untuk materi ini."}
+                  </p>
                 </div>
 
-                {/* Judul Materi */}
-                <h3 className="font-bold text-[#1d3557] text-base line-clamp-2 group-hover:text-[#003399] transition mb-2">
-                  {materi.judul}
-                </h3>
-
-                {/* Cuplikan Deskripsi */}
-                <p className="text-xs text-slate-600 line-clamp-3 mb-4 leading-relaxed">
-                  {materi.deskripsi || "Tidak ada deskripsi pengantar untuk materi ini."}
-                </p>
-              </div>
-
-              <div>
-                {/* Info Guru & Lampiran Indicator */}
-                <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 mb-3.5">
-                  <div className="flex items-center gap-1.5 truncate">
-                    <span className="text-slate-400">👤</span>
-                    <span className="font-medium truncate">{materi.guru || "Guru Pengajar"}</span>
+                <div>
+                  {/* Info Guru & Lampiran Indicator */}
+                  <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 mb-3.5">
+                    <div className="flex items-center gap-1.5 truncate">
+                      <span className="text-slate-400">👤</span>
+                      <span className="font-medium truncate">{materi.guru || "Guru Pengajar"}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-[11px]">
+                      {files.length > 0 && (
+                        <span className="px-1.5 py-0.5 bg-emerald-50 text-emerald-700 rounded border border-emerald-100 font-semibold" title={`${files.length} Berkas Lampiran`}>
+                          📁 {files.length} File{hasImages ? " (📸)" : ""}
+                        </span>
+                      )}
+                      {materi.tautan_eksternal && (
+                        <span className="px-1.5 py-0.5 bg-purple-50 text-purple-700 rounded border border-purple-100 font-semibold" title="Ada Tautan Web">
+                          Link
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1.5 text-[11px]">
-                    {materi.file_url && (
-                      <span className="px-1.5 py-0.5 bg-emerald-50 text-emerald-700 rounded border border-emerald-100 font-semibold" title="Ada Berkas Modul">
-                        PDF/Doc
-                      </span>
-                    )}
-                    {materi.tautan_eksternal && (
-                      <span className="px-1.5 py-0.5 bg-purple-50 text-purple-700 rounded border border-purple-100 font-semibold" title="Ada Tautan Web">
-                        Link
-                      </span>
-                    )}
-                  </div>
+
+                  {/* Tombol Lihat Detail */}
+                  <button
+                    type="button"
+                    onClick={() => setDetailModal(materi)}
+                    className="w-full py-2 px-3 rounded-xl bg-slate-50 hover:bg-[#003399] text-[#003399] hover:text-white border border-slate-200 hover:border-[#003399] text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer shadow-xs"
+                  >
+                    <span>👁️ Lihat Detail Materi</span>
+                  </button>
                 </div>
-
-                {/* Tombol Lihat Detail */}
-                <button
-                  type="button"
-                  onClick={() => setDetailModal(materi)}
-                  className="w-full py-2 px-3 rounded-xl bg-slate-50 hover:bg-[#003399] text-[#003399] hover:text-white border border-slate-200 hover:border-[#003399] text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer shadow-xs"
-                >
-                  <span>👁️ Lihat Detail Materi</span>
-                </button>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -264,74 +283,119 @@ export default function SiswaMateriPage() {
                 </div>
               </div>
 
-              {/* Berkas Lampiran & Tautan */}
+              {/* Berkas Lampiran Multi-File */}
               <div className="space-y-3">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                  Lampiran & Referensi Belajar
+                  Lampiran Berkas & Tangkapan Layar ({detailModal.lampiran && detailModal.lampiran.length > 0 ? detailModal.lampiran.length : detailModal.file_url ? 1 : 0} Berkas)
                 </h4>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {/* File Dokumen / PDF */}
-                  {detailModal.file_url ? (
-                    <a
-                      href={getFullFileUrl(detailModal.file_url)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="p-3.5 bg-emerald-50 hover:bg-emerald-100/80 border border-emerald-200 rounded-xl transition flex items-center justify-between group cursor-pointer"
-                    >
-                      <div className="flex items-center gap-2.5 truncate">
-                        <span className="text-2xl">📄</span>
-                        <div className="truncate">
-                          <p className="text-xs font-bold text-emerald-900 truncate">
-                            Berkas Modul / Materi
-                          </p>
-                          <p className="text-[11px] text-emerald-700">
-                            Buka dokumen materi (PDF/Office)
-                          </p>
-                        </div>
-                      </div>
-                      <span className="text-xs text-emerald-800 font-bold group-hover:translate-x-0.5 transition">
-                        ↗
-                      </span>
-                    </a>
-                  ) : (
-                    <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-400 text-xs flex items-center gap-2.5">
-                      <span>📄</span>
-                      <span>Tidak ada berkas file materi yang diunggah.</span>
-                    </div>
-                  )}
+                {(() => {
+                  const files = detailModal.lampiran && detailModal.lampiran.length > 0
+                    ? detailModal.lampiran
+                    : detailModal.file_url
+                    ? [{ file_url: detailModal.file_url, nama_file: detailModal.file_url.split("/").pop() || "Berkas Modul", tipe_file: "dokumen" }]
+                    : [];
 
-                  {/* Tautan Web Eksternal */}
-                  {detailModal.tautan_eksternal ? (
-                    <a
-                      href={detailModal.tautan_eksternal}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="p-3.5 bg-purple-50 hover:bg-purple-100/80 border border-purple-200 rounded-xl transition flex items-center justify-between group cursor-pointer"
-                    >
-                      <div className="flex items-center gap-2.5 truncate">
-                        <span className="text-2xl">🔗</span>
-                        <div className="truncate">
-                          <p className="text-xs font-bold text-purple-900 truncate">
-                            Tautan Pembelajaran
-                          </p>
-                          <p className="text-[11px] text-purple-700 truncate">
-                            Buka link video / artikel belajar
-                          </p>
-                        </div>
+                  if (files.length === 0) {
+                    return (
+                      <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-400 text-xs flex items-center gap-2.5">
+                        <span>📄</span>
+                        <span>Tidak ada berkas file materi yang diunggah.</span>
                       </div>
-                      <span className="text-xs text-purple-800 font-bold group-hover:translate-x-0.5 transition">
-                        ↗
-                      </span>
-                    </a>
-                  ) : (
-                    <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-400 text-xs flex items-center gap-2.5">
-                      <span>🔗</span>
-                      <span>Tidak ada tautan web eksternal.</span>
+                    );
+                  }
+
+                  return (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {files.map((file, idx) => {
+                        const isImage = file.tipe_file === "gambar" || /\.(png|jpe?g|webp)$/i.test(file.file_url);
+
+                        if (isImage) {
+                          return (
+                            <div key={idx} className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex flex-col justify-between space-y-2">
+                              <a href={getFullFileUrl(file.file_url)} target="_blank" rel="noopener noreferrer" className="block overflow-hidden rounded-lg border border-slate-200 bg-white">
+                                <img
+                                  src={getFullFileUrl(file.file_url)}
+                                  alt={file.nama_file}
+                                  className="w-full h-32 object-cover hover:scale-105 transition duration-200"
+                                />
+                              </a>
+                              <div className="flex items-center justify-between text-xs">
+                                <span className="font-semibold text-slate-700 truncate" title={file.nama_file}>
+                                  📸 {file.nama_file}
+                                </span>
+                                <a
+                                  href={getFullFileUrl(file.file_url)}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-blue-600 font-bold hover:underline shrink-0 ml-1"
+                                >
+                                  Buka ↗
+                                </a>
+                              </div>
+                            </div>
+                          );
+                        }
+
+                        return (
+                          <a
+                            key={idx}
+                            href={getFullFileUrl(file.file_url)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-3 bg-emerald-50 hover:bg-emerald-100/80 border border-emerald-200 rounded-xl transition flex items-center justify-between group cursor-pointer"
+                          >
+                            <div className="flex items-center gap-2.5 truncate">
+                              <span className="text-2xl">📄</span>
+                              <div className="truncate">
+                                <p className="text-xs font-bold text-emerald-900 truncate" title={file.nama_file}>
+                                  {file.nama_file}
+                                </p>
+                                <p className="text-[11px] text-emerald-700">
+                                  {file.ukuran_file ? formatFileSize(file.ukuran_file) : "Klik untuk membuka berkas"}
+                                </p>
+                              </div>
+                            </div>
+                            <span className="text-xs text-emerald-800 font-bold group-hover:translate-x-0.5 transition">
+                              ↗
+                            </span>
+                          </a>
+                        );
+                      })}
                     </div>
-                  )}
-                </div>
+                  );
+                })()}
               </div>
+
+              {/* Tautan Web Eksternal */}
+              {detailModal.tautan_eksternal && (
+                <div className="space-y-2 pt-2 border-t border-slate-100">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                    Referensi Eksternal
+                  </h4>
+                  <a
+                    href={detailModal.tautan_eksternal}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-3.5 bg-purple-50 hover:bg-purple-100/80 border border-purple-200 rounded-xl transition flex items-center justify-between group cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2.5 truncate">
+                      <span className="text-2xl">🔗</span>
+                      <div className="truncate">
+                        <p className="text-xs font-bold text-purple-900 truncate">
+                          Tautan Pembelajaran / Video
+                        </p>
+                        <p className="text-[11px] text-purple-700 truncate">
+                          {detailModal.tautan_eksternal}
+                        </p>
+                      </div>
+                    </div>
+                    <span className="text-xs text-purple-800 font-bold group-hover:translate-x-0.5 transition">
+                      Buka Link ↗
+                    </span>
+                  </a>
+                </div>
+              )}
             </div>
 
             {/* Footer Modal */}

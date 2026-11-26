@@ -14,7 +14,6 @@ const menu = [
   ["🗓️", "Jadwal Belajar", "/siswa/jadwal"],
   ["🔔", "Notifikasi", "/siswa/notifikasi"],
   ["👤", "Profil Saya", "/siswa/profil"],
-  ["⚙️", "Pengaturan", "/siswa/pengaturan"],
 ];
 
 export default function SiswaLayout({ children }: { children: React.ReactNode }) {
